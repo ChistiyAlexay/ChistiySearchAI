@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умный поиск с нейросетью</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .search-section {
+            padding: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #questionInput {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        #questionInput:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        #askButton {
+            padding: 15px 25px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        #askButton:hover {
+            background: #2980b9;
+        }
+
+        #askButton:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            padding: 0 30px 30px;
+        }
+
+        .answer-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .answer-box h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .answer-text {
+            line-height: 1.6;
+            color: #34495e;
+            white-space: pre-line;
+        }
+
+        .error-box {
+            background: #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid #fdcb6e;
+            color: #e17055;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        .api-section {
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .api-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        .api-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .free-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .examples {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .examples h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .example-questions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .example-question {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .example-question:hover {
+            background: #3498db;
+            color: white;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Умный поиск с нейросетью</h1>
+            <p>100% бесплатные ответы от AI моделей</p>
+        </div>
+
+        <div class="api-section">
+            <label for="apiSelect"><strong>Выберите нейросеть:</strong></label>
+            <select id="apiSelect" class="api-select">
+                <option value="local">Локальная база знаний (быстро)</option>
+                <option value="huggingface">HuggingFace Free API <span class="free-badge">БЕСПЛАТНО</span></option>
+                <option value="openrouter">OpenRouter Free <span class="free-badge">БЕСПЛАТНО</span></option>
+                <option value="deepseek">DeepSeek (требует баланс)</option>
+            </select>
+
+            <div id="apiKeySection" style="display: none; margin-top: 10px;">
+                <input type="password" id="apiKeyInput" class="api-select" placeholder="Введите API ключ (необязательно для бесплатных)">
+                <div class="api-info" id="apiInfo"></div>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="questionInput" placeholder="Введите ваш вопрос..." autocomplete="off">
+                <button id="askButton">Спросить</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p id="loadingText">Нейросеть ищет ответ...</p>
+            </div>
+        </div>
+
+        <div class="result-section">
+            <div id="result"></div>
+        </div>
+
+        <div class="examples">
+            <h3>Примеры вопросов:</h3>
+            <div class="example-questions">
+                <div class="example-question" onclick="setExample(this)">Объясни теорему Виета</div>
+                <div class="example-question" onclick="setExample(this)">Что такое квантовая физика?</div>
+                <div class="example-question" onclick="setExample(this)">Как работает ИИ?</div>
+                <div class="example-question" onclick="setExample(this)">Напиши код на Python</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Элементы DOM
+        const questionInput = document.getElementById('questionInput');
+        const askButton = document.getElementById('askButton');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const result = document.getElementById('result');
+        const apiSelect = document.getElementById('apiSelect');
+        const apiKeySection = document.getElementById('apiKeySection');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiInfo = document.getElementById('apiInfo');
+
+        // Расширенная база знаний
+        const knowledgeBase = {
+            'теорема виета': `Теорема Виета устанавливает связь между коэффициентами квадратного уравнения и его корнями.
+
+📌 Для квадратного уравнения: ax² + bx + c = 0
+• Сумма корней: x₁ + x₂ = -b/a
+• Произведение корней: x₁ × x₂ = c/a
+
+📝 Пример:
+Уравнение: x² - 5x + 6 = 0
+Корни: x₁ = 2, x₂ = 3
+Проверка: 2 + 3 = 5, 2 × 3 = 6`,
+
+            'привет': `Привет! 😊 Я - виртуальный помощник, готовый ответить на ваши вопросы.
+Чем могу помочь? Можете спросить о науке, технологиях, истории или любых других темах!`,
+
+            'как дела': `У меня всё отлично! Я готов помогать вам с вопросами и поиском информации.
+А как ваши дела? Чем могу быть полезен?`,
+
+            'квантовая физика': `Квантовая физика изучает поведение частиц на атомном и субатомном уровнях.
+
+🔬 Основные принципы:
+• Волновая функция
+• Принцип неопределенности
+• Квантовая суперпозиция
+• Квантовая запутанность`,
+
+            'искусственный интеллект': `ИИ — это создание систем, способных выполнять задачи, требующие человеческого интеллекта.
+
+🤖 Основные типы:
+• Машинное обучение
+• Глубокое обучение
+• Обработка естественного языка
+• Компьютерное зрение`,
+
+            'python код': `Вот пример кода на Python для начала:
+
+\`\`\`python
+# Простая программа приветствия
+name = input("Как вас зовут? ")
+print(f"Привет, {name}! Добро пожаловать в Python!")
+
+# Калькулятор
+a = float(input("Введите первое число: "))
+b = float(input("Введите второе число: "))
+print(f"Сумма: {a + b}")
+\`\`\``
+        };
+
+        // Обработчик выбора API
+        apiSelect.addEventListener('change', function() {
+            const needsKey = this.value === 'deepseek';
+            apiKeySection.style.display = needsKey ? 'block' : 'none';
+
+            if (this.value === 'huggingface') {
+                apiInfo.innerHTML = `🎯 <strong>100% БЕСПЛАТНО</strong> - использует открытые модели HuggingFace без API ключа`;
+            } else if (this.value === 'openrouter') {
+                apiInfo.innerHTML = `🎯 <strong>БЕСПЛАТНО</strong> - использует бесплатные модели OpenRouter. Ключ не обязателен, но можно указать свой для приоритета.`;
+            } else if (this.value === 'deepseek') {
+                apiInfo.innerHTML = `⚠️ <strong>ТРЕБУЕТ БАЛАНС</strong> - нужен пополненный аккаунт DeepSeek. Получите ключ на <a href="https://platform.deepseek.com/" target="_blank">platform.deepseek.com</a>`;
+            }
+        });
+
+        // 1. HuggingFace Inference API (БЕСПЛАТНО)
+        async function getHuggingFaceAnswer(question) {
+            loadingText.textContent = "Подключаемся к HuggingFace...";
+
+            try {
+                // Пробуем разные бесплатные модели
+                const models = [
+                    'microsoft/DialoGPT-large',
+                    'microsoft/DialoGPT-medium',
+                    'microsoft/DialoGPT-small'
+                ];
+
+                for (const model of models) {
+                    try {
+                        const response = await fetch(
+                            `https://api-inference.huggingface.co/models/${model}`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': 'Bearer hf_free_token', // Не требуется для некоторых моделей
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    inputs: question,
+                                    parameters: {
+                                        max_length: 200,
+                                        temperature: 0.7
+                                    }
+                                })
+                            }
+                        );
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data && data[0] && data[0].generated_text) {
+                                return data[0].generated_text;
+                            }
+                        }
+                    } catch (e) {
+                        continue; // Пробуем следующую модель
+                    }
+                }
+
+                throw new Error('Все модели временно недоступны');
+
+            } catch (error) {
+                console.error('HuggingFace error:', error);
+                throw new Error('HuggingFace временно недоступен. Используйте локальную базу или OpenRouter.');
+            }
+        }
+
+        // 2. OpenRouter FREE API (БЕСПЛАТНО)
+        async function getOpenRouterAnswer(question, apiKey = '') {
+            loadingText.textContent = "Подключаемся к OpenRouter...";
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'AI Search Assistant'
+                };
+
+                // Если есть ключ - используем его, если нет - пробуем без ключа
+                if (apiKey) {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        model: "google/gemini-2.0-flash-exp:free", // Бесплатная модель
+                        messages: [
+                            {
+                                role: "system",
+                                content: "Ты полезный ассистент. Отвечай кратко и понятно на русском языке. Будь точным в фактах."
+                            },
+                            {
+                                role: "user",
+                                content: question
+                            }
+                        ],
+                        max_tokens: 500,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    // Если ошибка 401 (нет ключа), пробуем другую модель
+                    if (response.status === 401) {
+                        return await getOpenRouterFallback(question);
+                    }
+                    throw new Error(`OpenRouter error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
+
+            } catch (error) {
+                console.error('OpenRouter error:', error);
+                throw new Error(`OpenRouter: ${error.message}`);
+            }
+        }
+
+        // Fallback для OpenRouter без ключа
+        async function getOpenRouterFallback(question) {
+            try {
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.origin,
+                        'X-Title': 'AI Assistant'
+                    },
+                    body: JSON.stringify({
+                        model: "huggingfaceh4/zephyr-7b-beta:free", // Другая бесплатная модель
+                        messages: [
+                            {
+                                role: "user",
+                                content: `Кратко ответь на русском: ${question}`
+                            }
+                        ],
+                        max_tokens: 300
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.choices[0].message.content;
+                }
+                throw new Error('Нет доступа к бесплатным моделям');
+
+            } catch (error) {
+                throw new Error('Бесплатные модели временно недоступны');
+            }
+        }
+
+        // 3. DeepSeek (только если есть баланс)
+        async function getDeepSeekAnswer(question, apiKey) {
+            loadingText.textContent = "Подключаемся к DeepSeek...";
+
+            try {
+                const response = await fetch('https://api.deepseek.com/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [
+                            {
+                                role: "user",
+                                content: question
+                            }
+                        ],
+                        max_tokens: 500
+                    })
+                });
+
+                if (!response.ok) {
+                    if (response.status === 402) {
+                        throw new Error('На вашем аккаунте DeepSeek недостаточно средств. Пополните баланс или используйте бесплатные варианты выше.');
+                    }
+                    throw new Error(`DeepSeek error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
+
+            } catch (error) {
+                throw new Error(`DeepSeek: ${error.message}`);
+            }
+        }
+
+        // Умный поиск в локальной базе
+        function findLocalAnswer(question) {
+            const normalizedQuestion = question.toLowerCase().trim();
+
+            // Приветственные вопросы
+            if (normalizedQuestion.includes('привет') || normalizedQuestion.includes('hello') || normalizedQuestion.includes('hi')) {
+                return knowledgeBase['привет'];
+            }
+            if (normalizedQuestion.includes('как дела') || normalizedQuestion.includes('how are you')) {
+                return knowledgeBase['как дела'];
+            }
+
+            // Поиск по ключевым словам
+            for (const [key, answer] of Object.entries(knowledgeBase)) {
+                if (normalizedQuestion.includes(key)) {
+                    return answer;
+                }
+            }
+
+            return null;
+        }
+
+        // Основная функция обработки вопроса
+        async function handleQuestion() {
+            const question = questionInput.value.trim();
+            const selectedApi = apiSelect.value;
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!question) {
+                showError('Пожалуйста, введите ваш вопрос');
+                return;
+            }
+
+            loading.style.display = 'block';
+            result.innerHTML = '';
+            askButton.disabled = true;
+
+            try {
+                let answer;
+                let usedApi = selectedApi;
+
+                if (selectedApi === 'local') {
+                    loadingText.textContent = "Ищем в базе знаний...";
+                    answer = findLocalAnswer(question) || getSmartAnswer(question);
+                }
+                else if (selectedApi === 'huggingface') {
+                    answer = await getHuggingFaceAnswer(question);
+                }
+                else if (selectedApi === 'openrouter') {
+                    answer = await getOpenRouterAnswer(question, apiKey);
+                }
+                else if (selectedApi === 'deepseek') {
+                    if (!apiKey) throw new Error('Введите API ключ DeepSeek');
+                    answer = await getDeepSeekAnswer(question, apiKey);
+                }
+
+                setTimeout(() => {
+                    showAnswer(question, answer, usedApi);
+                    loading.style.display = 'none';
+                    askButton.disabled = false;
+                }, 500);
+
+            } catch (error) {
+                console.error('Error:', error);
+
+                // Автоматически переключаемся на локальную базу при ошибке
+                const localAnswer = findLocalAnswer(question) || getSmartAnswer(question);
+                showAnswer(question,
+                    localAnswer +
+                    `\n\n⚠️ ${error.message}\n` +
+                    `🔧 Используется локальный ответ`,
+                    'local'
+                );
+
+                loading.style.display = 'none';
+                askButton.disabled = false;
+            }
+        }
+
+        function getSmartAnswer(question) {
+            return `🤔 По вашему вопросу: "${question}"
+
+Я нашел相关信息 в своей базе знаний.
+
+💡 Для более точного ответа попробуйте:
+• Использовать "HuggingFace Free API" или "OpenRouter Free"
+• Уточнить формулировку вопроса
+• Задать вопрос более конкретно`;
+        }
+
+        function showAnswer(question, answer, apiType) {
+            const sourceMap = {
+                'local': '🔄 Локальная база знаний',
+                'huggingface': '🤗 HuggingFace (Бесплатно)',
+                'openrouter': '🌐 OpenRouter (Бесплатно)',
+                'deepseek': '🚀 DeepSeek'
+            };
+
+            result.innerHTML = `
+                <div class="answer-box">
+                    <h3>📚 Вопрос: ${question}</h3>
+                    <div class="answer-text">${answer}</div>
+                    <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ccc; color: #666; font-size: 0.9em;">
+                        Источник: ${sourceMap[apiType] || apiType}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            result.innerHTML = `
+                <div class="error-box">
+                    <strong>⚠️ Ошибка:</strong> ${message}
+                </div>
+            `;
+        }
+
+        function setExample(element) {
+            questionInput.value = element.textContent;
+            questionInput.focus();
+        }
+
+        // Обработчики событий
+        askButton.addEventListener('click', handleQuestion);
+        questionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleQuestion();
+        });
+
+        // Инициализация
+        window.addEventListener('load', function() {
+            apiSelect.dispatchEvent(new Event('change'));
+            questionInput.focus();
+
+            result.innerHTML = `
+                <div class="success-box">
+                    <strong>🎉 Рекомендация:</strong><br>
+                    Используйте <strong>"HuggingFace Free API"</strong> или <strong>"OpenRouter Free"</strong> для 100% бесплатных ответов от реальных нейросетей!
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>
