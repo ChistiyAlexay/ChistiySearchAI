@@ -1,1 +1,237 @@
-//
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск DuckDuckGo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .search-button {
+            padding: 12px 24px;
+            background: #007cba;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .search-button:hover {
+            background: #005a87;
+        }
+        .search-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .result-item {
+            background: #f9f9f9;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007cba;
+        }
+        .result-title {
+            font-weight: bold;
+            color: #007cba;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .result-description {
+            color: #666;
+            line-height: 1.5;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #d32f2f;
+        }
+        .divider {
+            height: 2px;
+            background: #ddd;
+            margin: 20px 0;
+        }
+        .result-count {
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Поиск DuckDuckGo</h1>
+        <div class="search-form">
+            <input type="text" class="search-input" id="searchInput" placeholder="Введите ваш запрос..." onkeypress="handleKeyPress(event)">
+            <button class="search-button" onclick="performSearch()" id="searchButton">Найти</button>
+        </div>
+        <div id="resultsContainer"></div>
+    </div>
+
+    <script>
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsContainer = document.getElementById('resultsContainer');
+            const searchButton = document.getElementById('searchButton');
+
+            if (!query) {
+                resultsContainer.innerHTML = '<div class="error">⚠️ Пожалуйста, введите запрос</div>';
+                return;
+            }
+
+            if (query.toLowerCase() === 'выход') {
+                resultsContainer.innerHTML = '<div class="loading">👋 До свидания!</div>';
+                return;
+            }
+
+            // Блокируем кнопку на время поиска
+            searchButton.disabled = true;
+            searchButton.textContent = 'Поиск...';
+
+            resultsContainer.innerHTML = '<div class="loading">⏳ Ищу: "' + query + '"...</div>';
+
+            try {
+                // Используем CORS proxy для обхода ограничений
+                const encodedQuery = encodeURIComponent(query);
+                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                const targetUrl = `https://html.duckduckgo.com/html/?q=${encodedQuery}`;
+
+                const response = await fetch(proxyUrl + targetUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Ошибка при запросе к DuckDuckGo');
+                }
+
+                const html = await response.text();
+                const results = parseResults(html);
+                displayResults(results, query);
+
+            } catch (error) {
+                console.error('Ошибка:', error);
+                resultsContainer.innerHTML = '<div class="error">❌ Ошибка поиска: ' + error.message +
+                    '<br><small>Попробуйте обновить страницу или проверить подключение к интернету</small></div>';
+            } finally {
+                // Разблокируем кнопку
+                searchButton.disabled = false;
+                searchButton.textContent = 'Найти';
+            }
+        }
+
+        function parseResults(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const results = [];
+
+            // Ищем результаты поиска
+            const resultElements = doc.querySelectorAll('.result');
+
+            resultElements.forEach((result, index) => {
+                if (index >= 5) return; // Ограничиваем 5 результатами
+
+                const titleElem = result.querySelector('.result__a');
+                const descElem = result.querySelector('.result__snippet');
+
+                if (titleElem) {
+                    const title = cleanText(titleElem.textContent);
+                    const description = descElem ? cleanText(descElem.textContent) : '';
+
+                    if (title) {
+                        results.push({
+                            title: title,
+                            description: description
+                        });
+                    }
+                }
+            });
+
+            return results;
+        }
+
+        function cleanText(text) {
+            if (!text) return '';
+            // Убираем лишние пробелы и переносы строк
+            return text.replace(/\s+/g, ' ').trim();
+        }
+
+        function displayResults(results, query) {
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            if (!results || results.length === 0) {
+                resultsContainer.innerHTML = '<div class="error">❌ Не удалось найти результаты для "' + query + '"</div>';
+                return;
+            }
+
+            let html = '<div class="result-count">Найдено результатов: ' + results.length + '</div>';
+            html += '<div class="divider"></div>';
+
+            results.forEach((result, index) => {
+                html += '<div class="result-item">';
+                html += '<div class="result-title">' + (index + 1) + '. ' + result.title + '</div>';
+                if (result.description) {
+                    html += '<div class="result-description">' + result.description + '</div>';
+                }
+                html += '</div>';
+            });
+
+            html += '<div class="divider"></div>';
+            html += '<div style="text-align: center; color: #666; font-size: 14px;">Поиск выполнен через DuckDuckGo</div>';
+
+            resultsContainer.innerHTML = html;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        }
+
+        // Фокусируемся на поле ввода при загрузке
+        document.getElementById('searchInput').focus();
+
+        // Добавляем обработчик для кнопки (на всякий случай)
+        document.getElementById('searchButton').addEventListener('click', performSearch);
+    </script>
+</body>
+</html>
