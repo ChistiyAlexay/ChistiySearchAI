@@ -3,235 +3,389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Поиск DuckDuckGo</title>
+    <title>Умный поиск</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
-            background-color: #f5f5f5;
         }
         .container {
+            max-width: 900px;
+            margin: 0 auto;
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        h1 {
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 40px 30px;
             text-align: center;
-            color: #333;
-            margin-bottom: 30px;
         }
-        .search-form {
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        .search-section {
+            padding: 30px;
+        }
+        .search-box {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             margin-bottom: 20px;
         }
         .search-input {
             flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
+            padding: 15px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 50px;
             font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .search-input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
         .search-button {
-            padding: 12px 24px;
-            background: #007cba;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
             border: none;
-            border-radius: 5px;
-            cursor: pointer;
+            border-radius: 50px;
             font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         .search-button:hover {
-            background: #005a87;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
         }
         .search-button:disabled {
-            background: #ccc;
+            opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
-        .results {
-            margin-top: 30px;
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
         }
-        .result-item {
-            background: #f9f9f9;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #007cba;
+        .example-chip {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .result-title {
-            font-weight: bold;
-            color: #007cba;
-            margin-bottom: 10px;
-            font-size: 18px;
+        .example-chip:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
         }
-        .result-description {
-            color: #666;
-            line-height: 1.5;
+        .results-section {
+            padding: 0 30px 30px;
         }
         .loading {
             text-align: center;
-            color: #666;
-            font-style: italic;
-            padding: 20px;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         .error {
-            color: #d32f2f;
-            background: #ffebee;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #d32f2f;
+            background: #ffeaa7;
+            border: 1px solid #fdcb6e;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            color: #2d3436;
         }
-        .divider {
-            height: 2px;
-            background: #ddd;
-            margin: 20px 0;
+        .results-container {
+            display: none;
         }
-        .result-count {
-            color: #666;
+        .result-item {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #e1e8ed;
+            transition: all 0.3s ease;
+        }
+        .result-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .result-title {
+            color: #2c3e50;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .result-description {
+            color: #5c6b7a;
+            line-height: 1.6;
             margin-bottom: 15px;
+        }
+        .result-url {
+            color: #3498db;
+            font-size: 0.9em;
+            text-decoration: none;
+        }
+        .result-url:hover {
+            text-decoration: underline;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+        .results-count {
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        @media (max-width: 768px) {
+            .search-box {
+                flex-direction: column;
+            }
+            .search-button {
+                border-radius: 15px;
+            }
+            .header h1 {
+                font-size: 2em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔍 Поиск DuckDuckGo</h1>
-        <div class="search-form">
-            <input type="text" class="search-input" id="searchInput" placeholder="Введите ваш запрос..." onkeypress="handleKeyPress(event)">
-            <button class="search-button" onclick="performSearch()" id="searchButton">Найти</button>
+        <div class="header">
+            <h1>🔍 Умный поиск</h1>
+            <p>Найдите информацию быстро и просто</p>
         </div>
-        <div id="resultsContainer"></div>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput"
+                       placeholder="Введите ваш вопрос..." onkeypress="handleKeyPress(event)">
+                <button class="search-button" onclick="performSearch()" id="searchButton">
+                    Найти
+                </button>
+            </div>
+
+            <div class="examples">
+                <div class="example-chip" onclick="setExample('Что такое искусственный интеллект?')">
+                    🤖 Искусственный интеллект
+                </div>
+                <div class="example-chip" onclick="setExample('Первый закон Ньютона')">
+                    ⚛️ Физика
+                </div>
+                <div class="example-chip" onclick="setExample('История Древнего Рима')">
+                    🏛️ История
+                </div>
+                <div class="example-chip" onclick="setExample('Как работает блокчейн?')">
+                    ⛓️ Технологии
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <div id="loading" class="loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>Ищем лучшие результаты для вас...</p>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+
+            <div id="resultsContainer" class="results-container">
+                <div class="results-header">
+                    <h2>📋 Результаты поиска</h2>
+                    <div class="results-count" id="resultsCount"></div>
+                </div>
+                <div id="resultsList"></div>
+            </div>
+
+            <div id="noResults" class="no-results" style="display: none;">
+                <h3>😔 Ничего не найдено</h3>
+                <p>Попробуйте изменить запрос или использовать другие ключевые слова</p>
+            </div>
+        </div>
     </div>
 
     <script>
-        async function performSearch() {
-            const query = document.getElementById('searchInput').value.trim();
-            const resultsContainer = document.getElementById('resultsContainer');
-            const searchButton = document.getElementById('searchButton');
-
-            if (!query) {
-                resultsContainer.innerHTML = '<div class="error">⚠️ Пожалуйста, введите запрос</div>';
-                return;
-            }
-
-            if (query.toLowerCase() === 'выход') {
-                resultsContainer.innerHTML = '<div class="loading">👋 До свидания!</div>';
-                return;
-            }
-
-            // Блокируем кнопку на время поиска
-            searchButton.disabled = true;
-            searchButton.textContent = 'Поиск...';
-
-            resultsContainer.innerHTML = '<div class="loading">⏳ Ищу: "' + query + '"...</div>';
-
-            try {
-                // Используем CORS proxy для обхода ограничений
-                const encodedQuery = encodeURIComponent(query);
-                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-                const targetUrl = `https://html.duckduckgo.com/html/?q=${encodedQuery}`;
-
-                const response = await fetch(proxyUrl + targetUrl, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Ошибка при запросе к DuckDuckGo');
-                }
-
-                const html = await response.text();
-                const results = parseResults(html);
-                displayResults(results, query);
-
-            } catch (error) {
-                console.error('Ошибка:', error);
-                resultsContainer.innerHTML = '<div class="error">❌ Ошибка поиска: ' + error.message +
-                    '<br><small>Попробуйте обновить страницу или проверить подключение к интернету</small></div>';
-            } finally {
-                // Разблокируем кнопку
-                searchButton.disabled = false;
-                searchButton.textContent = 'Найти';
-            }
+        // Примеры запросов
+        function setExample(query) {
+            document.getElementById('searchInput').value = query;
+            document.getElementById('searchInput').focus();
         }
 
-        function parseResults(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const results = [];
-
-            // Ищем результаты поиска
-            const resultElements = doc.querySelectorAll('.result');
-
-            resultElements.forEach((result, index) => {
-                if (index >= 5) return; // Ограничиваем 5 результатами
-
-                const titleElem = result.querySelector('.result__a');
-                const descElem = result.querySelector('.result__snippet');
-
-                if (titleElem) {
-                    const title = cleanText(titleElem.textContent);
-                    const description = descElem ? cleanText(descElem.textContent) : '';
-
-                    if (title) {
-                        results.push({
-                            title: title,
-                            description: description
-                        });
-                    }
-                }
-            });
-
-            return results;
-        }
-
-        function cleanText(text) {
-            if (!text) return '';
-            // Убираем лишние пробелы и переносы строк
-            return text.replace(/\s+/g, ' ').trim();
-        }
-
-        function displayResults(results, query) {
-            const resultsContainer = document.getElementById('resultsContainer');
-
-            if (!results || results.length === 0) {
-                resultsContainer.innerHTML = '<div class="error">❌ Не удалось найти результаты для "' + query + '"</div>';
-                return;
-            }
-
-            let html = '<div class="result-count">Найдено результатов: ' + results.length + '</div>';
-            html += '<div class="divider"></div>';
-
-            results.forEach((result, index) => {
-                html += '<div class="result-item">';
-                html += '<div class="result-title">' + (index + 1) + '. ' + result.title + '</div>';
-                if (result.description) {
-                    html += '<div class="result-description">' + result.description + '</div>';
-                }
-                html += '</div>';
-            });
-
-            html += '<div class="divider"></div>';
-            html += '<div style="text-align: center; color: #666; font-size: 14px;">Поиск выполнен через DuckDuckGo</div>';
-
-            resultsContainer.innerHTML = html;
-        }
-
+        // Обработка нажатия Enter
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
                 performSearch();
             }
         }
 
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const searchButton = document.getElementById('searchButton');
+
+            if (!query) {
+                showError('Пожалуйста, введите запрос');
+                return;
+            }
+
+            // Скрываем предыдущие результаты и показываем загрузку
+            hideAllSections();
+            document.getElementById('loading').style.display = 'block';
+            searchButton.disabled = true;
+            searchButton.textContent = 'Поиск...';
+
+            try {
+                // Используем DuckDuckGo Instant Answer API
+                const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+
+                if (!response.ok) {
+                    throw new Error('Проблема с подключением к поиску');
+                }
+
+                const data = await response.json();
+                displayResults(data, query);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Не удалось выполнить поиск. Проверьте подключение к интернету.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                searchButton.disabled = false;
+                searchButton.textContent = 'Найти';
+            }
+        }
+
+        function displayResults(data, query) {
+            const resultsList = document.getElementById('resultsList');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsCount = document.getElementById('resultsCount');
+
+            resultsList.innerHTML = '';
+
+            let resultCount = 0;
+
+            // Прямой ответ (Abstract)
+            if (data.Abstract && data.AbstractText) {
+                resultCount++;
+                resultsList.innerHTML += `
+                    <div class="result-item">
+                        <div class="result-title">🎯 Прямой ответ</div>
+                        <div class="result-description">${data.AbstractText}</div>
+                        ${data.AbstractURL ? `<a href="${data.AbstractURL}" class="result-url" target="_blank">Источник: ${data.AbstractSource}</a>` : ''}
+                    </div>
+                `;
+            }
+
+            // Ответ из Wikipedia
+            if (data.Answer && data.AnswerType === 'calculator') {
+                resultCount++;
+                resultsList.innerHTML += `
+                    <div class="result-item">
+                        <div class="result-title">🧮 Результат</div>
+                        <div class="result-description">${data.Answer}</div>
+                    </div>
+                `;
+            }
+
+            // Связанные темы
+            if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+                data.RelatedTopics.slice(0, 5).forEach(topic => {
+                    if (topic.Text && topic.FirstURL) {
+                        resultCount++;
+                        resultsList.innerHTML += `
+                            <div class="result-item">
+                                <div class="result-title">📚 ${topic.Text.split(' - ')[0]}</div>
+                                ${topic.Text.split(' - ')[1] ? `<div class="result-description">${topic.Text.split(' - ')[1]}</div>` : ''}
+                                <a href="${topic.FirstURL}" class="result-url" target="_blank">Подробнее</a>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
+            // Результаты поиска
+            if (data.Results && data.Results.length > 0) {
+                data.Results.slice(0, 3).forEach(result => {
+                    resultCount++;
+                    resultsList.innerHTML += `
+                        <div class="result-item">
+                            <div class="result-title">🔗 ${result.Text || 'Результат'}</div>
+                            <a href="${result.FirstURL}" class="result-url" target="_blank">Перейти к источнику</a>
+                        </div>
+                    `;
+                });
+            }
+
+            if (resultCount > 0) {
+                resultsCount.textContent = `Найдено: ${resultCount}`;
+                resultsContainer.style.display = 'block';
+                document.getElementById('noResults').style.display = 'none';
+            } else {
+                document.getElementById('noResults').style.display = 'block';
+                resultsContainer.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            hideAllSections();
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideAllSections() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('noResults').style.display = 'none';
+        }
+
         // Фокусируемся на поле ввода при загрузке
         document.getElementById('searchInput').focus();
-
-        // Добавляем обработчик для кнопки (на всякий случай)
-        document.getElementById('searchButton').addEventListener('click', performSearch);
     </script>
 </body>
 </html>
